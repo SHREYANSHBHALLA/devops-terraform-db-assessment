@@ -1,0 +1,41 @@
+name: Terraform
+
+on:
+  pull_request:
+    paths:
+      - "infra/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/**"
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive infra/
+
+      - name: Terraform Init - Dev
+        working-directory: infra/envs/dev
+        run: terraform init -backend=false
+
+      - name: Terraform Validate - Dev
+        working-directory: infra/envs/dev
+        run: terraform validate
+
+      - name: Terraform Init - Prod
+        working-directory: infra/envs/prod
+        run: terraform init -backend=false
+
+      - name: Terraform Validate - Prod
+        working-directory: infra/envs/prod
+        run: terraform validate
