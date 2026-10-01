@@ -147,8 +147,8 @@ Both environments use the same reusable Terraform modules with environment-speci
 Environment-specific configuration is provided in:
 
 ```text
-infra/envs/dev/dev.tfvars
-infra/envs/prod/prod.tfvars
+infra/envs/dev/terraform.tfvars
+infra/envs/prod/terraform.tfvars
 ```
 
 The RDS password currently uses:
