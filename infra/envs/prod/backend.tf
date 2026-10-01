@@ -1,7 +1,2 @@
-terraform {
-  backend "s3" {
-    bucket = "your-terraform-state-bucket"
-    key    = "prod/terraform.tfstate"
-    region = "ap-south-1"
-  }
-}
+# Terraform remote state backend template.
+# Configure a real S3 bucket before deploying this environment.

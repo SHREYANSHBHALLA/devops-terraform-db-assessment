@@ -1,7 +1,2 @@
-terraform {
-  backend "s3" {
-    bucket = "your-terraform-state-bucket"
-    key    = "dev/terraform.tfstate"
-    region = "ap-south-1"
-  }
-}
+# Backend configuration is provided as a deployment template.
+# Configure a real S3 bucket before deployment.
