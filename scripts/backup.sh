@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BACKUP_DIR="backups"
 
