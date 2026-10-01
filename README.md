@@ -325,3 +325,8 @@ The Terraform configuration provides the infrastructure design and can be deploy
 3. Secure database credentials
 
 No AWS infrastructure is created as part of the current submission.
+
+
+## Maintainer
+
+Shreyansh Bhalla
