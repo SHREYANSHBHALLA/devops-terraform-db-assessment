@@ -2,17 +2,25 @@
 
 ## Overview
 
-This project implements a DevOps assessment covering:
+This repository contains the complete submission for the DevOps Terraform and Database Assessment.
 
-* AWS infrastructure design using Terraform
-* Modular Terraform structure for Dev and Prod
+The project includes:
+
+* Terraform code for AWS infrastructure design
+* Separate Dev and Prod Terraform environments
+* Modular Terraform configuration
 * ECS Fargate with Application Load Balancer
 * Private PostgreSQL RDS
 * Docker Compose PostgreSQL for local development
-* SQL schema and seed data
-* Query optimization using indexes
-* PostgreSQL backup and restore
-* Terraform validation using GitHub Actions
+* Database schema and seed data
+* Query optimization and indexing
+* PostgreSQL backup and restore scripts
+* GitHub Actions for Terraform validation
+* Setup and verification instructions
+
+The Terraform configuration is provided as an infrastructure design and has not been deployed to AWS.
+
+---
 
 ## Architecture
 
@@ -32,13 +40,13 @@ RDS PostgreSQL
 
 ### Network Design
 
-* ALB is deployed in public subnets.
+* ALB runs in public subnets.
 * ECS Fargate tasks run in private subnets.
 * RDS runs in private subnets.
 * NAT Gateway provides outbound internet access for private subnets.
 * RDS is not publicly accessible.
 
-### Security Groups
+### Security Flow
 
 ```text
 Internet
@@ -56,9 +64,11 @@ ECS Security Group
 RDS Security Group
 ```
 
-ECS accepts traffic only from the ALB, and RDS accepts PostgreSQL traffic only from ECS.
+ECS accepts traffic only from the ALB security group, and RDS accepts PostgreSQL traffic only from the ECS security group.
 
 ---
+
+# 1. Terraform Infrastructure
 
 ## Terraform Structure
 
@@ -116,13 +126,13 @@ Creates:
 * PostgreSQL RDS instance
 * DB subnet group
 * RDS security group
-* Storage encryption
+* Encrypted storage
 * Automated backup configuration
 * Deletion protection
 
 ---
 
-## Dev and Prod
+## Dev and Prod Configuration
 
 Both environments use the same reusable Terraform modules with environment-specific configuration.
 
@@ -132,9 +142,26 @@ Both environments use the same reusable Terraform modules with environment-speci
 | Backup retention    | 1 day         | 7 days        |
 | Deletion protection | Disabled      | Enabled       |
 
+### Terraform Variables
+
+Environment-specific configuration is provided in:
+
+```text
+infra/envs/dev/dev.tfvars
+infra/envs/prod/prod.tfvars
+```
+
+The RDS password currently uses:
+
+```hcl
+db_password = "change-me"
+```
+
+This is a placeholder and should be replaced with a secure secret before deployment.
+
 ---
 
-## Local PostgreSQL
+# 2. Local PostgreSQL Database
 
 PostgreSQL is provided through Docker Compose.
 
@@ -156,9 +183,18 @@ Connect to PostgreSQL:
 docker exec -it hotel-postgres psql -U admin -d hotel_booking
 ```
 
+### Local Database Configuration
+
+* Database: `hotel_booking`
+* Username: `admin`
+* Password: `admin123`
+* Port: `5432`
+
+These credentials are used only for the local Docker PostgreSQL database.
+
 ---
 
-## Database
+# 3. Database Schema and Seed Data
 
 SQL files are located in:
 
@@ -190,11 +226,17 @@ Stores:
 * JSONB event data
 * Creation timestamp
 
-The seed scripts populate the database with 150 bookings and associated booking events.
+The seed scripts create:
+
+* 150 hotel bookings
+* 150 associated booking events
+* Multiple organizations
+* Multiple cities
+* Multiple booking statuses
 
 ---
 
-## Query Optimization
+# 4. Query Optimization
 
 The assessment query is:
 
@@ -213,13 +255,15 @@ CREATE INDEX idx_hotel_bookings_city_created_at
 ON hotel_bookings (city, created_at);
 ```
 
-`EXPLAIN ANALYZE` was used to compare query execution before and after the index.
+`EXPLAIN ANALYZE` was used to inspect query execution.
 
-Because the test dataset contains only 150 rows, PostgreSQL may still choose a sequential scan because scanning a small table can be cheaper than using the index. The index is intended to provide better filtering performance as the table grows.
+Because the test dataset contains only 150 rows, PostgreSQL may still choose a sequential scan because scanning a small table can be cheaper than using the index. The composite index is intended to improve filtering performance as the table grows.
 
 ---
 
-## Backup and Restore
+# 5. Database Backup and Restore
+
+## Backup
 
 Backup script:
 
@@ -233,50 +277,46 @@ Create a timestamped PostgreSQL backup:
 ./scripts/backup.sh
 ```
 
-Backups are stored in:
+Backups are created in:
 
 ```text
 backups/
 ```
 
-The backup can be restored into a fresh PostgreSQL database using `psql`.
+Backup files are excluded from Git because they are generated database artifacts.
+
+## Restore
+
+Restore script:
+
+```text
+scripts/restore.sh
+```
+
+Restore a backup into a fresh database:
+
+```bash
+./scripts/restore.sh backups/<backup-file>.sql
+```
+
+The restore script creates:
+
+```text
+hotel_booking_restore
+```
+
+and restores the database contents into it.
+
+The restored database can be verified by checking the `hotel_bookings` and `booking_events` row counts.
 
 ---
 
-## Terraform Validation
-
-Format Terraform:
-
-```bash
-terraform fmt -recursive
-```
-
-Validate Dev:
-
-```bash
-cd infra/envs/dev
-terraform init -backend=false
-terraform validate
-```
-
-Validate Prod:
-
-```bash
-cd infra/envs/prod
-terraform init -backend=false
-terraform validate
-```
-
-Both environments have been validated successfully.
-
----
-
-## GitHub Actions
+# 6. GitHub Actions
 
 The workflow is located at:
 
 ```text
-.github/workflows/terraform.yml
+.github/workflows/terraform.yaml
 ```
 
 The workflow performs:
@@ -289,7 +329,7 @@ It runs for Terraform-related changes and does not deploy infrastructure.
 
 ---
 
-## Terraform State
+# 7. Terraform State
 
 Separate backend configurations are provided for Dev and Prod.
 
@@ -298,35 +338,88 @@ Dev  → dev/terraform.tfstate
 Prod → prod/terraform.tfstate
 ```
 
-The backend configuration is included as part of the infrastructure design. A real AWS S3 backend must be configured before deployment.
+The backend configuration uses an S3 backend design.
+
+A real S3 state bucket must be configured before deployment.
+
+Terraform state files and local Terraform directories are excluded from Git.
 
 ---
 
-## Security Considerations
+# 8. Security Considerations
 
-* RDS is configured as private and is not publicly accessible.
+* RDS is private and not publicly accessible.
 * RDS access is restricted to the ECS security group.
 * ECS access is restricted to the ALB security group.
-* Database credentials are stored in environment-specific `.tfvars` files and excluded from Git using `.gitignore`.
-* Terraform state files are excluded from Git.
+* RDS storage encryption is enabled.
 * Production RDS has deletion protection enabled.
-* Storage encryption is enabled for RDS.
+* Terraform state files are excluded from Git.
+* Generated database backup files are excluded from Git.
+* Database credentials are provided through Terraform variables.
+* The submitted RDS password is only a placeholder.
 
 ---
 
-## AWS Deployment
+# 9. Verification
 
-AWS deployment is intentionally not performed for this assessment.
+### Terraform
 
-The Terraform configuration provides the infrastructure design and can be deployed after configuring:
+```bash
+terraform fmt
+terraform init
+terraform validate
+terraform plan -refresh=false
+```
 
-1. AWS credentials
-2. A real S3 Terraform backend
-3. Secure database credentials
+### Database
 
-No AWS infrastructure is created as part of the current submission.
+```bash
+docker compose up
+```
 
+### Backup
+
+```bash
+./scripts/backup.sh
+```
+
+### Restore
+
+```bash
+./scripts/restore.sh backups/<backup-file>.sql
+```
+
+The repository is structured so that the Terraform configuration, database setup, SQL scripts, and backup/restore functionality can be reviewed independently.
+
+---
+
+# 10. Submission Contents
+
+```text
+.github/workflows/terraform.yaml
+.gitignore
+README.md
+docker-compose.yaml
+
+infra/
+├── envs/
+│   ├── dev/
+│   └── prod/
+└── modules/
+    ├── network/
+    ├── ecs/
+    └── rds/
+
+scripts/
+├── backup.sh
+└── restore.sh
+
+sql/
+├── schema.sql
+├── seed.sql
+└── seed_events.sql
+```
 
 ## Maintainer
 
-Shreyansh Bhalla
+**Shreyansh Bhalla**
