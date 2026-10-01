@@ -3,6 +3,8 @@
 *.tfstate
 *.tfstate.*
 *.tfvars
+!infra/envs/dev/dev.tfvars
+!infra/envs/prod/prod.tfvars
 
 # Backup files
 backups/*.sql
